@@ -21,7 +21,6 @@ headers = {
 }
 
 # Define the database endpoint URL
-
 def get_accounts(filter_obj):
     acct_url = f"https://api.notion.com/v1/databases/{ACCOUNTS_ID}/query"
     # Make the POST request to filter
@@ -31,11 +30,11 @@ def get_accounts(filter_obj):
     #print(response.json()['results'][]["properties"]["Group"])
     #print(response.json().keys())
     return titles
-    
+
 # Define the function to add a new row (create a new page)
 def create_page_in_notion(name, status, amount, action, note, date, fromAcct, toAcct):
     url = "https://api.notion.com/v1/pages"
-    
+
     # Define the page data, mapping your input parameters to the database properties
     data = {
         "parent": {"database_id": DATABASE_ID},
@@ -49,7 +48,7 @@ def create_page_in_notion(name, status, amount, action, note, date, fromAcct, to
                 ]
             },
             "Status": {
-                "select": {"name": status}  
+                "select": {"name": status}
             },
             "Amount": {
                 "number": amount
@@ -84,10 +83,10 @@ def create_page_in_notion(name, status, amount, action, note, date, fromAcct, to
             }
         }
     }
-    
+
     # Make the POST request to create a new page
     response = requests.post(url, headers=headers, json=data)
-    
+
     # Check if the request was successful
     if response.status_code == 200:
         print("Page created successfully.")
@@ -98,7 +97,7 @@ def create_page_in_notion(name, status, amount, action, note, date, fromAcct, to
         ud_title = "We updated this title"
         je_id = response.json()["properties"]["ID"]["unique_id"]["prefix"] + "-" + str(response.json()["properties"]["ID"]["unique_id"]["number"])
         je_id += f': {action} {name} {fdate}'
-        data = { 
+        data = {
             "properties": {
                 "Name": {
                     "title": [
@@ -110,7 +109,7 @@ def create_page_in_notion(name, status, amount, action, note, date, fromAcct, to
                 }
             }
         }
-        pg_url = f'https://api.notion.com/v1/pages/{pg_id}' 
+        pg_url = f'https://api.notion.com/v1/pages/{pg_id}'
         print(pg_url)
         pg_headers = {
             "Authorization": f'Bearer {NOTION_API_KEY}',
@@ -122,20 +121,20 @@ def create_page_in_notion(name, status, amount, action, note, date, fromAcct, to
         else:
             print(f"Error: {pg_response.status_code}")
             print(pg_response.text)
-            
+
         print(response.text)
         return response.json()["id"]
     else:
         print(f"Error: {response.status_code}")
         print(response.text)
-        
+
 # Example usage
         #if __name__ == "__main__":
         #create_page_in_notion(
-        #name="Test", 
-        #amount=150.00, 
-        #action="Deposit to", 
-        #note="Sample note for this entry.", 
+        #name="Test",
+        #amount=150.00,
+        #action="Deposit to",
+        #note="Sample note for this entry.",
         #date="2024-10-15",
         #toAcct = '110adc52e15880fd98e1c49131ec35a3',
         #fromAcct = 'b0ed7534d01345dd84f8dc0518b87b20',
@@ -152,7 +151,7 @@ if __name__ == "__main__":
         }
     }
     get_accounts(filter_obj)
-        
-        
-    
-    
+
+
+
+
