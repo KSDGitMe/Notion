@@ -65,6 +65,7 @@ def get_structured_output_from_ai(transcription):
         return None
 
 # Main function to control workflow
+# Test VS Code
 def main():
     # Step 1: Capture transcription from Whisper API
     transcription = test_whisper_transcription()
