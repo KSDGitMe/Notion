@@ -1,1 +1,5 @@
-openaisounddevicenumpyscipykeyboard
+openai
+sounddevice
+numpy
+scipy
+keyboard
