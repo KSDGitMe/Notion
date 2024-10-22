@@ -2,9 +2,16 @@ import openai
 import os
 from dotenv import load_dotenv
 import jsonschema
-from RetrieveJournal import create_page_in_notion
+import RetrieveJournal
 from WhisperCapture import test_whisper_transcription
+import pdb
+import json
 
+
+with open('accounts.json', 'rb') as accts_file:
+    ACCTS = json.load(accts_file)
+    ACCT_NAMES = ', '.join(ACCTS.keys())
+    
 # Load environment variables
 load_dotenv("Journal.env")
 
@@ -38,13 +45,14 @@ example_transcription = """
 
 # Function to request structured output from OpenAI
 def get_structured_output_from_ai(transcription):
+    print("Debug: " + transcription)
     try:
         response = client.chat.completions.create(
             model="gpt-4o-2024-08-06",  # GPT-4 with function calling
             messages=[
                 {
                     "role": "system",
-                    "content": "You are an AI that extracts structured data from transaction-related speech input. From Account and To Account values must be one of the following: Freedom, Chase Checking, Fuel Expense, Chase Savings, Amazon"
+                    "content": f"You are an AI that extracts structured data from transaction-related speech input. From Account and To Account values must be one of the following: {ACCT_NAMES}"
                 },
                 {
                     "role": "user",
@@ -55,20 +63,23 @@ def get_structured_output_from_ai(transcription):
             function_call="auto",
         )
         print( response.json() )
+        # pdb.set_trace()
         # Extract the structured response
-        structured_data = response.choices[0].message['function_call']['arguments']
+        structured_data = response.choices[0].message.function_call.arguments
         print("Structured Data:", structured_data)
-        return structured_data
+        return json.loads(structured_data)
 
     except Exception as e:
         print(f"Error extracting structured data: {e}")
         return None
+
 
 # Main function to control workflow
 # Test VS Code
 def main():
     # Step 1: Capture transcription from Whisper API
     transcription = test_whisper_transcription()
+    print(transcription)
 
     # Step 2: Send the transcription to OpenAI for structured output
     parsed_data = get_structured_output_from_ai(transcription)
@@ -95,16 +106,20 @@ def main():
             # Validate the parsed data against the schema
             jsonschema.validate(instance=parsed_data, schema=schema)
 
+            
+            RetrieveJournal.get_accounts()
+
             # Step 4: Create a new page in Notion using the parsed data
-            create_page_in_notion(
+            RetrieveJournal.create_page_in_notion(
                 name=parsed_data['name'],
-                status=parsed_data['status'],
+                status=parsed_data.get('status', 'Test'),  # Default to 'Unknown' if not present
                 amount=parsed_data['amount'],
                 action=parsed_data['action'],
-                note=parsed_data['note'],
+                note=parsed_data.get('note', ''),  # Default to empty string if not present
                 date=parsed_data['date'],
-                fromAcct=parsed_data['fromAcct'],
-                toAcct=parsed_data['toAcct']
+                from_acct=parsed_data['fromAcct'],
+                to_acct=parsed_data['toAcct']
+
             )
 
         except jsonschema.ValidationError as e:
@@ -118,5 +133,5 @@ def test_structured_output():
     get_structured_output_from_ai(transcription)
 
 if __name__ == "__main__":
-    #main()  # Uncomment this for production use
-    test_structured_output()  # Uncomment this for testing
+    main()  # Uncomment this for production use
+    #test_structured_output()  # Uncomment this for testing
