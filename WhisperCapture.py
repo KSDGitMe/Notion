@@ -3,7 +3,6 @@ import sounddevice as sd
 import numpy as np
 from scipy.io.wavfile import write
 import tempfile
-import keyboard  # For listening to key presses
 import os
 from dotenv import load_dotenv
 
@@ -17,13 +16,13 @@ client = OpenAI(api_key=api_key)
 SAMPLE_RATE = 16000  # Whisper API accepts 16kHz audio
 recording = False
 
-# Function to start recording audio until a key is pressed
+# Function to start recording audio until user input is given
 def record_audio(sample_rate=SAMPLE_RATE):
     global recording
     recording = True
     audio_data = []
 
-    print("Recording... Press 'spacebar' to stop.")
+    print("Recording... Press Enter to stop recording.")
 
     def callback(indata, frames, time, status):
         if status:
@@ -32,11 +31,8 @@ def record_audio(sample_rate=SAMPLE_RATE):
 
     # Start recording, non-blocking mode
     with sd.InputStream(samplerate=sample_rate, channels=1, callback=callback, dtype=np.int16):
-        while recording:
-            if keyboard.is_pressed('space'):
-                print("Recording stopped.")
-                recording = False
-            sd.sleep(100)  # Wait 100ms and check if the spacebar is pressed
+        input("Press Enter to stop the recording...")  # Wait for the user to press Enter
+        recording = False
 
     audio_data = np.concatenate(audio_data, axis=0)
     return audio_data
@@ -47,10 +43,9 @@ def save_audio_to_file(audio_data, sample_rate=SAMPLE_RATE):
     write(temp_file.name, sample_rate, audio_data)
     return temp_file.name
 
-# Whisper API to convert real-time audio to text using the correct OpenAI client instantiation and method
+# Whisper API to convert real-time audio to text
 def transcribe_audio_to_text(audio_file_path):
     with open(audio_file_path, "rb") as audio_file:
-        # Correct use of the client and transcription method
         transcription = client.audio.transcriptions.create(
             model="whisper-1",
             file=audio_file
@@ -59,7 +54,7 @@ def transcribe_audio_to_text(audio_file_path):
 
 # Function to test Whisper API and print transcription
 def test_whisper_transcription():
-    # Step 1: Record the audio in real-time, manually triggered
+    # Step 1: Record the audio in real-time
     audio_data = record_audio()
 
     # Step 2: Save the audio data to a temporary file
@@ -68,8 +63,10 @@ def test_whisper_transcription():
     # Step 3: Transcribe the audio using Whisper API
     text = transcribe_audio_to_text(audio_file_path)
 
-    # Step 4: Print the transcribed text to the console
+    # Step 4: Print the transcribed text
     print(f"Transcribed Text: {text}")
+
+    return text
 
 # Example usage
 if __name__ == "__main__":
