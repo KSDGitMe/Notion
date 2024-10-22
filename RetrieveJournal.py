@@ -3,6 +3,7 @@ import os
 from dotenv import load_dotenv
 from datetime import datetime
 import pdb
+import json
 
 # Load environment variables from the .env file
 load_dotenv('Journal.env')
@@ -13,6 +14,10 @@ DATABASE_ID = os.getenv('NOTION_PAGE_ID')
 ACCOUNTS_ID = os.getenv('NOTION_ACCTS_ID')
 NOTION_VERSION = '2022-06-28'
 
+with open('accounts.json', 'rb') as accts_file:
+    # To DO: Error Handling
+    ACCTS = json.load(accts_file)
+    
 # Set up the headers for authentication and Notion API version
 headers = {
     "Authorization": f'Bearer {NOTION_API_KEY}',
@@ -21,19 +26,34 @@ headers = {
 }
 
 # Define the database endpoint URL
-def get_accounts(filter_obj):
+def get_accounts(filter_obj=None):
     acct_url = f"https://api.notion.com/v1/databases/{ACCOUNTS_ID}/query"
     # Make the POST request to filter
     response = requests.post(acct_url, headers=headers, json=filter_obj)
-    titles = [item["properties"]["Name"]['title'] for item in response.json()['results']]
-    titles= [title[0]['text']['content'] for title in titles]
+    # List comprehension version:
+    #titles = [item["properties"]["Name"]['title'] for item in response.json()['results']]
+    #titles= [title[0]['text']['content'] for title in titles]
+
+    # Loop Version of above list comprehension:
+    titles = []
+    for item in response.json()['results']:
+        title_obj = item["properties"]["Name"]['title']
+        acct_id = item['id']
+        title = title_obj[0]['text']['content']
+        titles.append((title, acct_id))
+    titles = dict(titles)
     #print(response.json()['results'][]["properties"]["Group"])
     #print(response.json().keys())
     return titles
 
-# Define the function to add a new row (create a new page)
-def create_page_in_notion(name, status, amount, action, note, date, fromAcct, toAcct):
+# Define the function to add a new row (create a new page) to the Journal Entries database
+# ?KSD? Can the status parm be defaulted to "Test" if not passed?  See get_accounts(filter_obj=None) call above
+def create_page_in_notion(name, status, amount, action, note, date, from_acct, to_acct):
     url = "https://api.notion.com/v1/pages"
+
+# To Do:  Error handling if either Key (from_acct/to_acct) is not found, then refresh ACCTS, then retry search
+    from_acct = ACCTS[from_acct]
+    to_acct= ACCTS[to_acct]
 
     # Define the page data, mapping your input parameters to the database properties
     data = {
@@ -48,7 +68,7 @@ def create_page_in_notion(name, status, amount, action, note, date, fromAcct, to
                 ]
             },
             "Status": {
-                "select": {"name": status}
+                "select": {"name": "Test"}
             },
             "Amount": {
                 "number": amount
@@ -70,14 +90,14 @@ def create_page_in_notion(name, status, amount, action, note, date, fromAcct, to
             "From Account": {
                 "relation": [
                     {
-                        "id": fromAcct
+                        "id": from_acct
                     }  # Relation to the "From Account" page
                 ]
             },
             "To Account": {
                 "relation": [
                     {
-                        "id": toAcct
+                        "id": to_acct
                     }  # Relation to the "To Account" page
                 ]
             }
@@ -95,8 +115,13 @@ def create_page_in_notion(name, status, amount, action, note, date, fromAcct, to
         dateobj = datetime.strptime(date, '%Y-%m-%d')
         fdate = dateobj.strftime('%b%y')
         ud_title = "We updated this title"
+
+        # Create a meaningful and unique Title (aka Name) from other values in the Notion database row:
+        # 1) Assemble the ID prefix and ID given by Notion which ensures uniqueness in this database.
         je_id = response.json()["properties"]["ID"]["unique_id"]["prefix"] + "-" + str(response.json()["properties"]["ID"]["unique_id"]["number"])
-        je_id += f': {action} {name} {fdate}'
+        # 2)  Concatenate and format the selected row values which give the Title (Name) meaning to the user.
+        je_id += f': {name} {fdate}'
+
         data = {
             "properties": {
                 "Name": {
@@ -150,7 +175,8 @@ if __name__ == "__main__":
             }
         }
     }
-    get_accounts(filter_obj)
+    print( get_accounts() )
+    
 
 
 
