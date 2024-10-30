@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 import jsonschema
 import RetrieveJournal
-from WhisperCapture import test_whisper_transcription
+from WhisperCapture import test_whisper_transcription, transcribe_audio_to_text
 import pdb
 import json
 
@@ -76,10 +76,14 @@ def get_structured_output_from_ai(transcription):
 
 # Main function to control workflow
 # Test VS Code
-def main():
+def main(audio_file_path):
     # Step 1: Capture transcription from Whisper API
-    transcription = test_whisper_transcription()
-    print(transcription)
+    print(audio_file_path)
+    transcription = transcribe_audio_to_text(audio_file_path)
+    print("A: " + transcription)
+    #return None
+    #transcription = test_whisper_transcription()
+    #print("B: " + transcription)
 
     # Step 2: Send the transcription to OpenAI for structured output
     parsed_data = get_structured_output_from_ai(transcription)
